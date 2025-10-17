@@ -6,7 +6,7 @@ import routes from './routes';
 import { errorHandler } from './middleware/validation';
 
 const app = express();
-const PORT = 3001; // Cambiado temporalmente
+const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // Security middleware
 app.use(helmet());
