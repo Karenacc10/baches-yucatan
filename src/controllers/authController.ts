@@ -23,22 +23,36 @@ export const register = async (req: Request, res: Response) => {
     const passwordHash = await hashPassword(password);
 
     // Create worker
-    const worker = await prisma.worker.create({
-      data: {
-        ...userData,
-        email,
-        passwordHash
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        lastname: true,
-        role: true,
-        status: true,
-        createdAt: true
-      }
-    });
+   const worker = await prisma.worker.create({
+  data: {
+    email,
+    passwordHash,
+    name: userData.name,
+    lastname: userData.lastname,
+    role: userData.role,
+    status: userData.status ?? 'active',
+    ...(userData.secondName && { secondName: userData.secondName }),
+    ...(userData.secondLastname && { secondLastname: userData.secondLastname }),
+    ...(userData.badgeNumber && { badgeNumber: userData.badgeNumber }),
+    ...(userData.rank && { rank: userData.rank }),
+    ...(userData.photoUrl && { photoUrl: userData.photoUrl }),
+    ...(userData.yearsOfService && { yearsOfService: userData.yearsOfService }),
+    ...(userData.specialization && { specialization: userData.specialization }),
+    ...(userData.languagesSpoken && { languagesSpoken: userData.languagesSpoken }),
+    ...(userData.certifications && { certifications: userData.certifications }),
+    ...(userData.awards && { awards: userData.awards }),
+    ...(userData.notes && { notes: userData.notes })
+  },
+  select: {
+    id: true,
+    email: true,
+    name: true,
+    lastname: true,
+    role: true,
+    status: true,
+    createdAt: true
+  }
+});
 
     // Generate token
     const token = generateToken({
