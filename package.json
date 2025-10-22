@@ -5,9 +5,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn src/index.ts",
-  "build": "tsc",
+    "build": "tsc && npm run prisma generate",
   "start": "npx prisma migrate deploy && node dist/index.js",
-    "postinstall": "npx prisma generate"
+  "start:prod": "npx prisma generate && npx prisma db push && node dist/main",
+    "postinstall": "npx prisma generate",
+    "copy-prisma": "xcopy /E /I /Y src\\generated\\prisma dist\\generated\\prisma"
+    
   },
   "keywords": [],
   "author": "",
