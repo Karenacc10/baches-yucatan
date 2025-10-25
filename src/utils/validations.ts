@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+
 // Validation schemas
 export const createReportSchema = z.object({
   latitude: z.number().min(-90).max(90),
