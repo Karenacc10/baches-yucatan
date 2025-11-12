@@ -53,6 +53,6 @@ router.put('/:id', authenticateToken, validateBody(updateReportSchema), updateRe
  * @desc Delete report
  * @access Admin and Supervisor only
  */
-router.delete('/:id', authenticateToken, requireRole(['admin', 'supervisor']), deleteReport);
+router.delete('/:id', authenticateToken, requireRole(['admin', 'worker']), deleteReport);
 
 export default router;

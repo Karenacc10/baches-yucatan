@@ -195,7 +195,6 @@ export const updateReport = async (req: AuthenticatedRequest, res: Response) => 
     });
   }
 };
-
 export const deleteReport = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -207,13 +206,34 @@ export const deleteReport = async (req: AuthenticatedRequest, res: Response) => 
       });
     }
 
-    await prisma.report.delete({
-      where: { id }
-    });
+    // Validar que el usuario esté autenticado
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'No autenticado',
+        message: 'Usuario no autenticado'
+      });
+    }
 
-    res.json({
-      message: 'Reporte eliminado exitosamente'
-    });
+    // Buscar el reporte
+    const report = await prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      return res.status(404).json({
+        error: 'Reporte no encontrado',
+        message: 'El reporte solicitado no existe'
+      });
+    }
+
+    // Validar permisos: si es worker, solo puede eliminar sus propios reportes
+    if (req.user.role === 'worker' && report.reportedByWorkerId !== req.user.id) {
+      return res.status(403).json({
+        error: 'No autorizado',
+        message: 'No puedes eliminar un reporte que no creaste'
+      });
+    }
+
+    await prisma.report.delete({ where: { id } });
+
+    res.json({ message: 'Reporte eliminado exitosamente' });
   } catch (error) {
     console.error('Delete report error:', error);
     res.status(500).json({
