@@ -5,11 +5,13 @@ import {
   getVehicleById,
   updateVehicle,
   deleteVehicle,
-  getAvailableVehicles
+  getAvailableVehicles,
+  getVehicleByPlate
 } from '../controllers/vehicleController';
 import { validateBody } from '../middleware/validation';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { createVehicleSchema, updateVehicleSchema } from '../utils/validations';
+
 
 const router = Router();
 
@@ -26,13 +28,19 @@ router.get('/', authenticateToken, getVehicles);
  * @access Private
  */
 router.get('/available', authenticateToken, getAvailableVehicles);
-
+/**
+ * @route GET /api/vehicles/plate/:licensePlate
+ * @desc Get vehicle by license plate
+ * @access Private (worker, supervisor, admin)
+ */
+router.get('/plate/:licensePlate', authenticateToken, getVehicleByPlate);
 /**
  * @route GET /api/vehicles/:id
  * @desc Get vehicle by ID
  * @access Private
  */
 router.get('/:id', authenticateToken, getVehicleById);
+
 
 /**
  * @route POST /api/vehicles

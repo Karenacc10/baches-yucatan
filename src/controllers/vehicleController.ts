@@ -82,6 +82,48 @@ export const getVehicles = async (req: Request, res: Response) => {
   }
 };
 
+export const getVehicleByPlate = async (req: Request, res: Response) => {
+  try {
+    const { licensePlate } = req.params;
+
+    if (!licensePlate) {
+      return res.status(400).json({
+        error: 'Placa requerida',
+        message: 'Debes proporcionar la placa del vehículo'
+      });
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { licensePlate },
+      include: {
+        assignedWorker: {
+          select: { id: true, name: true, lastname: true, email: true }
+        },
+        reports: true,
+        assignments: true
+      }
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        error: 'Vehículo no encontrado',
+        message: `No existe un vehículo con la placa ${licensePlate}`
+      });
+    }
+
+    res.json({
+      message: 'Vehículo obtenido exitosamente',
+      data: vehicle
+    });
+  } catch (error) {
+    console.error('Get vehicle by plate error:', error);
+    res.status(500).json({
+      error: 'Error al obtener vehículo',
+      message: 'Ocurrió un error al buscar el vehículo por placa'
+    });
+  }
+};
+
 export const getVehicleById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
