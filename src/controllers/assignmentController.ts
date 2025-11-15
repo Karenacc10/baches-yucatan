@@ -6,7 +6,48 @@ import { AuthenticatedRequest } from '../types';
 export const createAssignment = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const assignmentData = req.body;
-    
+    const { workerId, vehicleId } = assignmentData;
+
+    // Validate worker and vehicle exist
+    const [worker, vehicle] = await Promise.all([
+      prisma.worker.findUnique({ where: { id: workerId } }),
+      prisma.vehicle.findUnique({ where: { id: vehicleId } })
+    ]);
+
+    if (!worker) {
+      return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
+    }
+
+    if (!vehicle) {
+      return res.status(404).json({ error: 'Vehicle not found', message: 'El vehículo especificado no existe' });
+    }
+
+    // Disallow admin/supervisor from being assigned vehicles
+    if (worker.role === 'admin' || worker.role === 'supervisor') {
+      return res.status(403).json({
+        error: 'Asignación no permitida',
+        message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados`
+      });
+    }
+
+    // If vehicle already assigned to someone else, block
+    if (vehicle.assignedWorkerId && vehicle.assignedWorkerId !== workerId) {
+      const assignedWorker = await prisma.worker.findUnique({ where: { id: vehicle.assignedWorkerId } });
+      return res.status(409).json({
+        error: 'Vehículo ya asignado',
+        message: `El vehículo con placa ${vehicle.licensePlate} ya está asignado al trabajador ${assignedWorker?.name ?? 'desconocido'} ${assignedWorker?.lastname ?? ''}`
+      });
+    }
+
+    // Prevent same worker having another vehicle with the same plate (safety check)
+    const duplicate = await prisma.vehicle.findFirst({ where: { assignedWorkerId: workerId, licensePlate: vehicle.licensePlate, NOT: { id: vehicle.id } } });
+    if (duplicate) {
+      return res.status(409).json({
+        error: 'Placa duplicada para trabajador',
+        message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicle.licensePlate}`
+      });
+    }
+
     const assignment = await prisma.assignment.create({
       data: assignmentData,
       include: {
@@ -160,6 +201,33 @@ export const updateAssignment = async (req: AuthenticatedRequest, res: Response)
     // If marking as completed, set completedAt
     if (updateData.progressStatus === 'completed' && !updateData.completedAt) {
       updateData.completedAt = new Date();
+    }
+
+    // If changing worker or vehicle, perform same validations as on create
+    if (updateData.workerId || updateData.vehicleId) {
+      const current = await prisma.assignment.findUnique({ where: { id } });
+      const newWorkerId = updateData.workerId ?? current?.workerId;
+      const newVehicleId = updateData.vehicleId ?? current?.vehicleId;
+
+      const [worker, vehicle] = await Promise.all([
+        prisma.worker.findUnique({ where: { id: newWorkerId } }),
+        prisma.vehicle.findUnique({ where: { id: newVehicleId } })
+      ]);
+
+      if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
+      if (!vehicle) return res.status(404).json({ error: 'Vehicle not found', message: 'El vehículo especificado no existe' });
+
+      if (worker.role === 'admin' || worker.role === 'supervisor') {
+        return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
+      }
+
+      if (vehicle.assignedWorkerId && vehicle.assignedWorkerId !== newWorkerId) {
+        const assignedWorker = await prisma.worker.findUnique({ where: { id: vehicle.assignedWorkerId } });
+        return res.status(409).json({ error: 'Vehículo ya asignado', message: `El vehículo con placa ${vehicle.licensePlate} ya está asignado al trabajador ${assignedWorker?.name ?? 'desconocido'} ${assignedWorker?.lastname ?? ''}` });
+      }
+
+      const duplicate = await prisma.vehicle.findFirst({ where: { assignedWorkerId: newWorkerId, licensePlate: vehicle.licensePlate, NOT: { id: vehicle.id } } });
+      if (duplicate) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicle.licensePlate}` });
     }
 
     const assignment = await prisma.assignment.update({

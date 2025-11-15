@@ -6,7 +6,21 @@ import { VehicleQuery, AuthenticatedRequest } from '../types';
 export const createVehicle = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const vehicleData = req.body;
-    
+    // If assignedWorker provided, validate role and conflicts
+    if (vehicleData.assignedWorkerId) {
+      const worker = await prisma.worker.findUnique({ where: { id: vehicleData.assignedWorkerId } });
+      if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
+      if (worker.role === 'admin' || worker.role === 'supervisor') {
+        return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
+      }
+
+      // Ensure the worker doesn't already have a vehicle with same plate
+      if (vehicleData.licensePlate) {
+        const dup = await prisma.vehicle.findFirst({ where: { assignedWorkerId: vehicleData.assignedWorkerId, licensePlate: vehicleData.licensePlate } });
+        if (dup) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicleData.licensePlate}` });
+      }
+    }
+
     const vehicle = await prisma.vehicle.create({
       data: vehicleData,
       include: {
@@ -214,6 +228,26 @@ export const updateVehicle = async (req: AuthenticatedRequest, res: Response) =>
         error: 'ID requerido',
         message: 'Se requiere el ID del vehículo'
       });
+    }
+
+    // If assignedWorkerId being set/changed, validate
+    if (updateData.assignedWorkerId !== undefined) {
+      if (updateData.assignedWorkerId === null) {
+        // unassigning, OK
+      } else {
+        const worker = await prisma.worker.findUnique({ where: { id: updateData.assignedWorkerId } });
+        if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
+        if (worker.role === 'admin' || worker.role === 'supervisor') {
+          return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
+        }
+
+        // Ensure the worker doesn't already have another vehicle with same plate
+        const vehicleToCheck = updateData.licensePlate ? updateData.licensePlate : (await prisma.vehicle.findUnique({ where: { id } }))?.licensePlate;
+        if (vehicleToCheck) {
+          const dup = await prisma.vehicle.findFirst({ where: { assignedWorkerId: updateData.assignedWorkerId, licensePlate: vehicleToCheck, NOT: { id } } });
+          if (dup) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicleToCheck}` });
+        }
+      }
     }
 
     const vehicle = await prisma.vehicle.update({

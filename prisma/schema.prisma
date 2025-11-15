@@ -21,7 +21,7 @@ model Report {
   date                DateTime
   reportedByVehicleId String?
   reportedByWorkerId  String?
-  status              ReportStatus @default(reported)
+  status              ReportStatus
   severity            Severity
   comments            String?
   images              String[]
