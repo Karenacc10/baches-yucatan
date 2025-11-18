@@ -126,6 +126,29 @@ export const login = async (req: Request, res: Response) => {
 
     const { passwordHash, ...workerData } = worker;
 
+    // Si el rol es 'worker', requiere vehículo asignado para permitir el acceso móvil
+    if (worker.role === 'worker') {
+      const assignedVehicle = await prisma.vehicle.findFirst({
+        where: { assignedWorkerId: worker.id },
+        select: { id: true, licensePlate: true, model: true, year: true, color: true }
+      });
+
+      if (!assignedVehicle) {
+        return res.status(403).json({
+          error: 'Sin vehículo asignado',
+          message: 'No tienes un vehículo asignado. No puedes ingresar a la app móvil hasta que se te asigne uno.'
+        });
+      }
+
+      return res.json({
+        message: 'Login exitoso',
+        data: workerData,
+        token,
+        vehicle: assignedVehicle
+      });
+    }
+
+    // Para admin/supervisor permitir login normalmente
     res.json({
       message: 'Login exitoso',
       data: workerData,
