@@ -46,23 +46,5 @@ export const errorHandler = (error: any, req: Request, res: Response, next: Next
   });
 };
 
-// ✅ Ejemplo de esquema Zod (puedes moverlo a utils si prefieres)
-export const createWorkerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string(),
-  secondName: z.string().optional(),
-  lastname: z.string(),
-  secondLastname: z.string().optional(),
-  role: z.enum(['admin', 'supervisor', 'worker']),
-  status: z.enum(['active', 'inactive', 'suspended']).optional(),
-  badgeNumber: z.string().optional(),
-  rank: z.string().optional(),
-  photoUrl: z.string().url().optional(),
-  yearsOfService: z.number().int().nonnegative().optional(),
-  specialization: z.array(z.string()).optional(),
-  languagesSpoken: z.array(z.string()).optional(),
-  certifications: z.array(z.string()).optional(),
-  awards: z.array(z.string()).optional(),
-  notes: z.string().optional()
-});
+// Los esquemas Zod se definen en `src/utils/validations.ts`.
+// Usa `validateBody(schema)` importando los esquemas desde allí.

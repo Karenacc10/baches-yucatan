@@ -60,15 +60,10 @@ export const createWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1, 'Last name is required'),
   secondLastname: z.string().optional(),
-  badgeNumber: z.string().optional(),
-  rank: z.string().optional(),
+  phoneNumber: z.number().int().optional(),
+  fechaNacimiento: z.string().datetime().optional(),
   photoUrl: z.string().url().optional(),
-  yearsOfService: z.number().int().min(0).optional(),
-  specialization: z.array(z.string()).optional(),
-  languagesSpoken: z.array(z.string()).optional(),
-  certifications: z.array(z.string()).optional(),
-  awards: z.array(z.string()).optional(),
-  notes: z.string().optional()
+  status: z.enum(['active', 'inactive', 'suspended']).optional()
 });
 
 export const updateWorkerSchema = z.object({
@@ -78,16 +73,10 @@ export const updateWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1).optional(),
   secondLastname: z.string().min(1).optional(),
-  badgeNumber: z.string().optional(),
-  rank: z.string().optional(),
+  phoneNumber: z.number().int().optional(),
+  fechaNacimiento: z.string().datetime().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
-  photoUrl: z.string().url().optional(),
-  yearsOfService: z.number().int().min(0).optional(),
-  specialization: z.array(z.string()).optional(),
-  languagesSpoken: z.array(z.string()).optional(),
-  certifications: z.array(z.string()).optional(),
-  awards: z.array(z.string()).optional(),
-  notes: z.string().optional()
+  photoUrl: z.string().url().optional()
 });
 
 export const createAssignmentSchema = z.object({

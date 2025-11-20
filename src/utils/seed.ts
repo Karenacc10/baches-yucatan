@@ -24,12 +24,9 @@ async function createAdminUser() {
         name: 'Administrador',
         lastname: 'Sistema',
         secondLastname: 'Baches',
-        badgeNumber: 'ADMIN001',
-        rank: 'Administrador General',
-        status: 'active',
-        specialization: ['Gestión de sistemas', 'Administración'],
-        languagesSpoken: ['Español', 'Inglés'],
-        notes: 'Usuario administrador del sistema de gestión de baches'
+        phoneNumber: 999999999,
+        fechaNacimiento: new Date('1980-01-01'),
+        status: 'active'
       }
     });
 
