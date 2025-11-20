@@ -70,18 +70,12 @@ CREATE TABLE "Worker" (
     "secondName" TEXT,
     "lastname" TEXT NOT NULL,
     "secondLastname" TEXT NOT NULL,
-    "badgeNumber" TEXT,
-    "rank" TEXT,
+    "phoneNumber" INTEGER NOT NULL,
+    "fechaNacimiento" TIMESTAMP(3) NOT NULL,
     "status" "WorkerStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "photoUrl" TEXT,
-    "yearsOfService" INTEGER,
-    "specialization" TEXT[],
-    "languagesSpoken" TEXT[],
-    "certifications" TEXT[],
-    "awards" TEXT[],
-    "notes" TEXT,
 
     CONSTRAINT "Worker_pkey" PRIMARY KEY ("id")
 );
