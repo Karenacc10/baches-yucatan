@@ -34,7 +34,7 @@ export const register = async (req: Request, res: Response) => {
     ...(userData.secondName && { secondName: userData.secondName }),
     ...(userData.secondLastname && { secondLastname: userData.secondLastname }),
     ...(userData.photoUrl && { photoUrl: userData.photoUrl }),
-    ...(userData.phoneNumber && { phoneNumber: Number(userData.phoneNumber) }),
+    ...(userData.phoneNumber && { phoneNumber: String(userData.phoneNumber) }),
     ...(userData.fechaNacimiento && { fechaNacimiento: new Date(userData.fechaNacimiento) })
   },
   select: {

@@ -3,11 +3,6 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model Report {
   id                 String       @id @default(uuid())
   // 📍 Campos del lugar (en vez de otra tabla)
@@ -60,7 +55,7 @@ model Worker {
   secondName       String?
   lastname         String
   secondLastname   String
-  phoneNumber      Int
+  phoneNumber      String
   fechaNacimiento  DateTime
   status           WorkerStatus  @default(active)
   createdAt        DateTime      @default(now())

@@ -60,7 +60,7 @@ export const createWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1, 'Last name is required'),
   secondLastname: z.string().optional(),
-  phoneNumber: z.number().int().optional(),
+  phoneNumber: z.string().optional(),
   fechaNacimiento: z.string().datetime().optional(),
   photoUrl: z.string().url().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional()
@@ -73,7 +73,7 @@ export const updateWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1).optional(),
   secondLastname: z.string().min(1).optional(),
-  phoneNumber: z.number().int().optional(),
+  phoneNumber: z.string().optional(),
   fechaNacimiento: z.string().datetime().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   photoUrl: z.string().url().optional()
