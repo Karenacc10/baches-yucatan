@@ -30,7 +30,7 @@ export const createVehicle = async (req: AuthenticatedRequest, res: Response) =>
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true
+            phoneNumber: true
           }
         }
       }
@@ -72,7 +72,7 @@ export const getVehicles = async (req: Request, res: Response) => {
               name: true,
               lastname: true,
               email: true,
-              badgeNumber: true
+              phoneNumber: true
             }
           },
           _count: {
@@ -158,7 +158,7 @@ export const getVehicleById = async (req: Request, res: Response) => {
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true,
+            phoneNumber: true,
             role: true
           }
         },
@@ -260,7 +260,7 @@ export const updateVehicle = async (req: AuthenticatedRequest, res: Response) =>
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true
+            phoneNumber: true
           }
         }
       }

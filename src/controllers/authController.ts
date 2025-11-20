@@ -33,15 +33,9 @@ export const register = async (req: Request, res: Response) => {
     status: userData.status ?? 'active',
     ...(userData.secondName && { secondName: userData.secondName }),
     ...(userData.secondLastname && { secondLastname: userData.secondLastname }),
-    ...(userData.badgeNumber && { badgeNumber: userData.badgeNumber }),
-    ...(userData.rank && { rank: userData.rank }),
     ...(userData.photoUrl && { photoUrl: userData.photoUrl }),
-    ...(userData.yearsOfService && { yearsOfService: userData.yearsOfService }),
-    ...(userData.specialization && { specialization: userData.specialization }),
-    ...(userData.languagesSpoken && { languagesSpoken: userData.languagesSpoken }),
-    ...(userData.certifications && { certifications: userData.certifications }),
-    ...(userData.awards && { awards: userData.awards }),
-    ...(userData.notes && { notes: userData.notes })
+    ...(userData.phoneNumber && { phoneNumber: Number(userData.phoneNumber) }),
+    ...(userData.fechaNacimiento && { fechaNacimiento: new Date(userData.fechaNacimiento) })
   },
   select: {
     id: true,
@@ -183,15 +177,9 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
         secondLastname: true,
         role: true,
         status: true,
-        badgeNumber: true,
-        rank: true,
+        phoneNumber: true,
+        fechaNacimiento: true,
         photoUrl: true,
-        yearsOfService: true,
-        specialization: true,
-        languagesSpoken: true,
-        certifications: true,
-        awards: true,
-        notes: true,
         createdAt: true,
         updatedAt: true
       }

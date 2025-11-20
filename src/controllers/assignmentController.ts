@@ -57,7 +57,6 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true,
             role: true
           }
         },
@@ -111,7 +110,6 @@ export const getAssignments = async (req: Request, res: Response) => {
               name: true,
               lastname: true,
               email: true,
-              badgeNumber: true,
               role: true
             }
           },
@@ -152,10 +150,7 @@ export const getAssignmentById = async (req: Request, res: Response) => {
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true,
             role: true,
-            specialization: true,
-            languagesSpoken: true,
             photoUrl: true
           }
         },
@@ -240,7 +235,6 @@ export const updateAssignment = async (req: AuthenticatedRequest, res: Response)
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true,
             role: true
           }
         },

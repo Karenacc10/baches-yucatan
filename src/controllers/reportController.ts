@@ -123,7 +123,7 @@ export const getReportById = async (req: Request, res: Response) => {
             name: true,
             lastname: true,
             email: true,
-            badgeNumber: true
+            phoneNumber: true
           }
         }
       }
