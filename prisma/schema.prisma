@@ -1,3 +1,13 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model Report {
   id                 String       @id @default(uuid())
   // 📍 Campos del lugar (en vez de otra tabla)
