@@ -16,7 +16,7 @@ export const createReportSchema = z.object({
   reportedByWorkerId: z.string().uuid().optional(),
   severity: z.enum(['low', 'medium', 'high']),
   comments: z.string().optional(),
-  images: z.array(z.string()).optional()
+  images: z.string(z.string()).optional()
 });
 
 export const updateReportSchema = z.object({
