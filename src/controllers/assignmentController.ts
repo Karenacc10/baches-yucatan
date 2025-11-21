@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { getPagination, formatResponse } from '../utils/helpers';
+import { getPagination, formatResponse, stringifyBigInts } from '../utils/helpers';
 import { AuthenticatedRequest } from '../types';
 
 export const createAssignment = async (req: AuthenticatedRequest, res: Response) => {
@@ -74,7 +74,7 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
 
     res.status(201).json({
       message: 'Asignación creada exitosamente',
-      data: assignment
+      data: stringifyBigInts(assignment)
     });
   } catch (error) {
     console.error('Create assignment error:', error);
@@ -127,7 +127,7 @@ export const getAssignments = async (req: Request, res: Response) => {
       prisma.assignment.count({ where })
     ]);
 
-    res.json(formatResponse(assignments, pageNum, limitNum, total));
+    res.json(formatResponse(stringifyBigInts(assignments), pageNum, limitNum, total));
   } catch (error) {
     console.error('Get assignments error:', error);
     res.status(500).json({
@@ -177,7 +177,7 @@ export const getAssignmentById = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Asignación obtenida exitosamente',
-      data: assignment
+      data: stringifyBigInts(assignment)
     });
   } catch (error) {
     console.error('Get assignment error:', error);
@@ -252,7 +252,7 @@ export const updateAssignment = async (req: AuthenticatedRequest, res: Response)
 
     res.json({
       message: 'Asignación actualizada exitosamente',
-      data: assignment
+      data: stringifyBigInts(assignment)
     });
   } catch (error) {
     console.error('Update assignment error:', error);
@@ -327,7 +327,7 @@ export const getMyAssignments = async (req: AuthenticatedRequest, res: Response)
       prisma.assignment.count({ where })
     ]);
 
-    res.json(formatResponse(assignments, pageNum, limitNum, total));
+    res.json(formatResponse(stringifyBigInts(assignments), pageNum, limitNum, total));
   } catch (error) {
     console.error('Get my assignments error:', error);
     res.status(500).json({

@@ -1,31 +1,33 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 model Report {
-  id                 String       @id @default(uuid())
-  // 📍 Campos del lugar (en vez de otra tabla)
-  latitude           Float
-  longitude          Float
-  street             String?
-  neighborhood       String?   // colonia o zona
-  city               String?
-  state              String?
-  postalCode         String?
-  description        String?   // texto libre sobre el lugar
-
-  date               DateTime
-  reportedByVehicle  Vehicle?     @relation("VehicleReports", fields: [reportedByVehicleId], references: [id])
+  id                  String       @id @default(uuid())
+  latitude            Float
+  longitude           Float
+  street              String?
+  neighborhood        String?
+  city                String?
+  state               String?
+  postalCode          String?
+  description         String?
+  date                DateTime
   reportedByVehicleId String?
-  reportedByWorker   Worker?      @relation(fields: [reportedByWorkerId], references: [id])
-  reportedByWorkerId String?
-  status             ReportStatus @default(reported)
-  severity           Severity
-  comments           String?
-  images             ReportImage[]
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  reportedByWorkerId  String?
+  status              ReportStatus @default(reported)
+  severity            Severity
+  comments            String?
+  images              String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  reportedByVehicle   Vehicle?     @relation("VehicleReports", fields: [reportedByVehicleId], references: [id])
+  reportedByWorker    Worker?      @relation(fields: [reportedByWorkerId], references: [id])
 }
 
 model Vehicle {
@@ -35,53 +37,47 @@ model Vehicle {
   year               Int?
   color              String?
   corporation        String?
-  assignedWorker     Worker?       @relation(fields: [assignedWorkerId], references: [id])
   assignedWorkerId   String?
-  assigners          VehicleAssigner[]
   status             VehicleStatus @default(active)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
-
-  reports            Report[]      @relation("VehicleReports")
   assignments        Assignment[]
+  reports            Report[]      @relation("VehicleReports")
+  assignedWorker     Worker?       @relation(fields: [assignedWorkerId], references: [id])
 }
 
 model Worker {
-  id               String        @id @default(uuid())
-  role             Role
-  email            String        @unique
-  passwordHash     String
-  name             String
-  secondName       String?
-  lastname         String
-  secondLastname   String
-  phoneNumber      String
-  fechaNacimiento  DateTime
-  status           WorkerStatus  @default(active)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  photoUrl         String?
-
-  vehicleAssigned  Vehicle[]
-  vehicleAssigners VehicleAssigner[]
-  reports          Report[]
-  assignments      Assignment[]
+  id              String       @id @default(uuid())
+  role            Role
+  email           String       @unique
+  passwordHash    String
+  name            String
+  secondName      String?
+  lastname        String
+  secondLastname  String
+  phoneNumber     String?
+  fechaNacimiento DateTime
+  status          WorkerStatus @default(active)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  photoUrl        String?
+  assignments     Assignment[]
+  reports         Report[]
+  vehicleAssigned Vehicle[]
 }
 
 model Assignment {
-  id              String             @id @default(uuid())
-  // reportIds converted to relation AssignmentReport if needed
-  // reportIds       Json               // guarda array de objetos tipo ReportAndProgress
-  teamId          Int?
-  worker          Worker             @relation(fields: [workerId], references: [id])
-  workerId        String
-  vehicle         Vehicle?           @relation(fields: [vehicleId], references: [id])
-  vehicleId       String?
-  assignedAt      DateTime?          @default(now())
-  completedAt     DateTime?
-  progressStatus  ProgressStatus     @default(not_started)
-  priority        Priority           @default(medium)
-  notes           String?
+  id             String         @id @default(uuid())
+  teamId         Int?
+  workerId       String
+  vehicleId      String?
+  assignedAt     DateTime?      @default(now())
+  completedAt    DateTime?
+  progressStatus ProgressStatus @default(not_started)
+  priority       Priority       @default(medium)
+  notes          String?
+  vehicle        Vehicle?       @relation(fields: [vehicleId], references: [id])
+  worker         Worker         @relation(fields: [workerId], references: [id])
 }
 
 enum Role {
@@ -120,26 +116,9 @@ enum ProgressStatus {
   completed
   on_hold
 }
+
 enum Priority {
   low
   medium
   high
 }
-
-model ReportImage {
-  id        String   @id @default(uuid())
-  url       String
-  report    Report   @relation(fields: [reportId], references: [id])
-  reportId  String
-  createdAt DateTime @default(now())
-}
-
-model VehicleAssigner {
-  id         String  @id @default(uuid())
-  vehicle    Vehicle @relation(fields: [vehicleId], references: [id])
-  vehicleId  String
-  worker     Worker  @relation(fields: [workerId], references: [id])
-  workerId   String
-  assignedAt DateTime? @default(now())
-}
-

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { getPagination, formatResponse } from '../utils/helpers';
+import { getPagination, formatResponse, stringifyBigInts } from '../utils/helpers';
 import { ReportQuery, AuthenticatedRequest } from '../types';
 
 export const createReport = async (req: AuthenticatedRequest, res: Response) => {
@@ -34,7 +34,7 @@ export const createReport = async (req: AuthenticatedRequest, res: Response) => 
 
     res.status(201).json({
       message: 'Reporte creado exitosamente',
-      data: report
+      data: stringifyBigInts(report)
     });
   } catch (error) {
     console.error('Create report error:', error);
@@ -84,7 +84,7 @@ export const getReports = async (req: Request, res: Response) => {
       prisma.report.count({ where })
     ]);
 
-    res.json(formatResponse(reports, pageNum, limitNum, total));
+    res.json(formatResponse(stringifyBigInts(reports), pageNum, limitNum, total));
   } catch (error) {
     console.error('Get reports error:', error);
     res.status(500).json({
@@ -138,7 +138,7 @@ export const getReportById = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Reporte obtenido exitosamente',
-      data: report
+      data: stringifyBigInts(report)
     });
   } catch (error) {
     console.error('Get report error:', error);
@@ -185,7 +185,7 @@ export const updateReport = async (req: AuthenticatedRequest, res: Response) => 
 
     res.json({
       message: 'Reporte actualizado exitosamente',
-      data: report
+      data: stringifyBigInts(report)
     });
   } catch (error) {
     console.error('Update report error:', error);
@@ -290,7 +290,7 @@ export const getReportsByLocation = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Reportes por ubicación obtenidos exitosamente',
-      data: reports
+      data: stringifyBigInts(reports)
     });
   } catch (error) {
     console.error('Get reports by location error:', error);

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { hashPassword, comparePassword, generateToken } from '../utils/helpers';
+import { hashPassword, comparePassword, generateToken, stringifyBigInts } from '../utils/helpers';
 import { AuthenticatedRequest } from '../types';
 
 export const register = async (req: Request, res: Response) => {
@@ -57,7 +57,7 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: 'Trabajador registrado exitosamente',
-      data: worker,
+      data: stringifyBigInts(worker),
       token
     });
   } catch (error) {
@@ -136,16 +136,16 @@ export const login = async (req: Request, res: Response) => {
 
       return res.json({
         message: 'Login exitoso',
-        data: workerData,
+        data: stringifyBigInts(workerData),
         token,
-        vehicle: assignedVehicle
+        vehicle: stringifyBigInts(assignedVehicle)
       });
     }
 
     // Para admin/supervisor permitir login normalmente
     res.json({
       message: 'Login exitoso',
-      data: workerData,
+      data: stringifyBigInts(workerData),
       token
     });
   } catch (error) {
@@ -194,7 +194,7 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({
       message: 'Perfil obtenido exitosamente',
-      data: worker
+      data: stringifyBigInts(worker)
     });
   } catch (error) {
     console.error('Get profile error:', error);

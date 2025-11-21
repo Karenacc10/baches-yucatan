@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { getPagination, formatResponse, hashPassword } from '../utils/helpers';
+import { getPagination, formatResponse, hashPassword, stringifyBigInts } from '../utils/helpers';
 import { WorkerQuery, AuthenticatedRequest } from '../types';
 
 export const createWorker = async (req: AuthenticatedRequest, res: Response) => {
@@ -21,6 +21,11 @@ export const createWorker = async (req: AuthenticatedRequest, res: Response) => 
 
     // Hash password
     const passwordHash = await hashPassword(password);
+
+    // Coerce phoneNumber to BigInt if provided
+    if (workerData.phoneNumber !== undefined && workerData.phoneNumber !== null) {
+      workerData.phoneNumber = BigInt(String(workerData.phoneNumber));
+    }
 
     const worker = await prisma.worker.create({
       data: {
@@ -47,7 +52,7 @@ export const createWorker = async (req: AuthenticatedRequest, res: Response) => 
 
     res.status(201).json({
       message: 'Trabajador creado exitosamente',
-      data: worker
+      data: stringifyBigInts(worker)
     });
   } catch (error) {
     console.error('Create worker error:', error);
@@ -106,7 +111,7 @@ export const getWorkers = async (req: Request, res: Response) => {
       prisma.worker.count({ where })
     ]);
 
-    res.json(formatResponse(workers, pageNum, limitNum, total));
+    res.json(formatResponse(stringifyBigInts(workers), pageNum, limitNum, total));
   } catch (error) {
     console.error('Get workers error:', error);
     res.status(500).json({
@@ -190,7 +195,7 @@ export const getWorkerById = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Trabajador obtenido exitosamente',
-      data: worker
+      data: stringifyBigInts(worker)
     });
   } catch (error) {
     console.error('Get worker error:', error);
@@ -209,6 +214,11 @@ export const updateWorker = async (req: AuthenticatedRequest, res: Response) => 
     // If password is being updated, hash it
     if (password) {
       updateData.passwordHash = await hashPassword(password);
+    }
+
+    // Coerce phoneNumber to BigInt if provided
+    if (updateData.phoneNumber !== undefined && updateData.phoneNumber !== null) {
+      updateData.phoneNumber = BigInt(String(updateData.phoneNumber));
     }
 
     const worker = await prisma.worker.update({
@@ -233,7 +243,7 @@ export const updateWorker = async (req: AuthenticatedRequest, res: Response) => 
 
     res.json({
       message: 'Trabajador actualizado exitosamente',
-      data: worker
+      data: stringifyBigInts(worker)
     });
   } catch (error) {
     console.error('Update worker error:', error);
@@ -308,7 +318,7 @@ export const getAvailableWorkers = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Trabajadores disponibles obtenidos exitosamente',
-      data: workers
+      data: stringifyBigInts(workers)
     });
   } catch (error) {
     console.error('Get available workers error:', error);

@@ -52,3 +52,17 @@ export const validateId = (id: string | undefined): string => {
   }
   return id;
 };
+
+export const stringifyBigInts = (value: any): any => {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'bigint') return value.toString();
+  if (Array.isArray(value)) return value.map(stringifyBigInts);
+  if (typeof value === 'object') {
+    const out: any = {};
+    for (const k of Object.keys(value)) {
+      out[k] = stringifyBigInts(value[k]);
+    }
+    return out;
+  }
+  return value;
+};

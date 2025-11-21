@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { getPagination, formatResponse } from '../utils/helpers';
+import { getPagination, formatResponse, stringifyBigInts } from '../utils/helpers';
 import { VehicleQuery, AuthenticatedRequest } from '../types';
 
 export const createVehicle = async (req: AuthenticatedRequest, res: Response) => {
@@ -38,7 +38,7 @@ export const createVehicle = async (req: AuthenticatedRequest, res: Response) =>
 
     res.status(201).json({
       message: 'Vehículo creado exitosamente',
-      data: vehicle
+      data: stringifyBigInts(vehicle)
     });
   } catch (error) {
     console.error('Create vehicle error:', error);
@@ -86,7 +86,7 @@ export const getVehicles = async (req: Request, res: Response) => {
       prisma.vehicle.count({ where })
     ]);
 
-    res.json(formatResponse(vehicles, pageNum, limitNum, total));
+    res.json(formatResponse(stringifyBigInts(vehicles), pageNum, limitNum, total));
   } catch (error) {
     console.error('Get vehicles error:', error);
     res.status(500).json({
@@ -127,7 +127,7 @@ export const getVehicleByPlate = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Vehículo obtenido exitosamente',
-      data: vehicle
+      data: stringifyBigInts(vehicle)
     });
   } catch (error) {
     console.error('Get vehicle by plate error:', error);
@@ -268,7 +268,7 @@ export const updateVehicle = async (req: AuthenticatedRequest, res: Response) =>
 
     res.json({
       message: 'Vehículo actualizado exitosamente',
-      data: vehicle
+      data: stringifyBigInts(vehicle)
     });
   } catch (error) {
     console.error('Update vehicle error:', error);
@@ -341,7 +341,7 @@ export const getAvailableVehicles = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Vehículos disponibles obtenidos exitosamente',
-      data: vehicles
+      data: stringifyBigInts(vehicles)
     });
   } catch (error) {
     console.error('Get available vehicles error:', error);
