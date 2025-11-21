@@ -36,7 +36,7 @@ CREATE TABLE "Report" (
     "status" "ReportStatus" NOT NULL DEFAULT 'reported',
     "severity" "Severity" NOT NULL,
     "comments" TEXT,
-    "images" TEXT,
+    "images" TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -51,7 +51,7 @@ CREATE TABLE "Vehicle" (
     "year" INTEGER,
     "color" TEXT,
     "corporation" TEXT,
-    "assignedWorkerId" TEXT,
+    "assignerWorkersIds" TEXT[],
     "status" "VehicleStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE "Worker" (
     "secondName" TEXT,
     "lastname" TEXT NOT NULL,
     "secondLastname" TEXT NOT NULL,
-    "phoneNumber" TEXT,
+    "phoneNumber" INTEGER NOT NULL,
     "fechaNacimiento" TIMESTAMP(3) NOT NULL,
     "status" "WorkerStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,13 +82,13 @@ CREATE TABLE "Worker" (
 -- CreateTable
 CREATE TABLE "Assignment" (
     "id" TEXT NOT NULL,
-    "teamId" INTEGER,
     "workerId" TEXT NOT NULL,
-    "vehicleId" TEXT,
-    "assignedAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "vehicleId" TEXT NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "completedAt" TIMESTAMP(3),
     "progressStatus" "ProgressStatus" NOT NULL DEFAULT 'not_started',
     "priority" "Priority" NOT NULL DEFAULT 'medium',
+    "active" BOOLEAN NOT NULL DEFAULT true,
     "notes" TEXT,
 
     CONSTRAINT "Assignment_pkey" PRIMARY KEY ("id")
@@ -107,10 +107,7 @@ ALTER TABLE "Report" ADD CONSTRAINT "Report_reportedByVehicleId_fkey" FOREIGN KE
 ALTER TABLE "Report" ADD CONSTRAINT "Report_reportedByWorkerId_fkey" FOREIGN KEY ("reportedByWorkerId") REFERENCES "Worker"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Vehicle" ADD CONSTRAINT "Vehicle_assignedWorkerId_fkey" FOREIGN KEY ("assignedWorkerId") REFERENCES "Worker"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_vehicleId_fkey" FOREIGN KEY ("vehicleId") REFERENCES "Vehicle"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_workerId_fkey" FOREIGN KEY ("workerId") REFERENCES "Worker"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_vehicleId_fkey" FOREIGN KEY ("vehicleId") REFERENCES "Vehicle"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
