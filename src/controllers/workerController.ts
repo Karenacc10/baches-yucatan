@@ -190,3 +190,49 @@ export const deleteWorker = async (req: Request, res: Response) => {
     });
   }
 };
+
+/* ================================
+   TRABAJADORES DISPONIBLES
+================================ */
+export const getAvailableWorkers = async (req: Request, res: Response) => {
+  try {
+    const { role } = req.query;
+
+    const where: any = {
+      status: 'active'
+    };
+
+    if (role) {
+      where.role = role;
+    }
+
+    const workers = await prisma.worker.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        lastname: true,
+        email: true,
+        phoneNumber: true,
+        fechaNacimiento: true,
+        role: true
+      },
+      orderBy: [
+        { lastname: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+
+    return res.status(200).json({
+      message: 'Trabajadores disponibles obtenidos ✅',
+      workers
+    });
+
+  } catch (error) {
+    console.error('Error al obtener trabajadores disponibles:', error);
+    return res.status(500).json({
+      error: 'Error al obtener trabajadores disponibles'
+    });
+  }
+};
+
