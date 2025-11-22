@@ -8,53 +8,53 @@ import {
   stringifyBigInts
 } from '../utils/helpers';
 import { AuthenticatedRequest } from '../types';
-import {
-  createWorkerSchema,
-  loginSchema
-} from '../utils/validations';
+import { createWorkerSchema, loginSchema } from '../utils/validations';
 
 /* ===========================
-   REGISTER
+  REGISTER
 =========================== */
 export const register = async (req: Request, res: Response) => {
   try {
-    // ✅ Validar body con Zod
+    // Validar body con Zod
     const validatedData = createWorkerSchema.parse(req.body);
     const { email, password, ...userData } = validatedData;
 
-    // 📌 Validar fechaNacimiento
-    let birthDate: Date;
-    if (userData.fechaNacimiento) {
-      birthDate = new Date(userData.fechaNacimiento);
-      if (isNaN(birthDate.getTime())) {
-        return res.status(400).json({
-          error: 'Fecha inválida',
-          message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
-        });
-      }
-    } else {
+    // Validar fechaNacimiento
+    if (!userData.fechaNacimiento) {
       return res.status(400).json({
         error: 'Falta fechaNacimiento',
         message: 'Debes enviar fechaNacimiento'
       });
     }
+    const birthDate = new Date(userData.fechaNacimiento);
+    if (isNaN(birthDate.getTime())) {
+      return res.status(400).json({
+        error: 'Fecha inválida',
+        message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
+      });
+    }
 
-    // 📌 Validar role
-    const roleValue: Role = (() => {
-      switch (userData.role?.toLowerCase()) {
-        case 'admin': return Role.admin;
-        case 'supervisor': return Role.supervisor;
-        case 'worker': return Role.worker;
-        default:
-          return Role.worker; // valor por defecto
-      }
-    })();
+    // Validar role
+    let roleValue: Role;
+    switch (userData.role?.toLowerCase()) {
+      case 'admin':
+        roleValue = Role.admin;
+        break;
+      case 'supervisor':
+        roleValue = Role.supervisor;
+        break;
+      case 'worker':
+        roleValue = Role.worker;
+        break;
+      default:
+        return res.status(400).json({
+          error: 'role inválido',
+          message: 'role debe ser admin, supervisor o worker'
+        });
+    }
 
-    // 📌 Verificar si ya existe
-    const existingWorker = await prisma.worker.findUnique({
-      where: { email }
-    });
-
+    // Verificar si ya existe
+    const existingWorker = await prisma.worker.findUnique({ where: { email } });
     if (existingWorker) {
       return res.status(409).json({
         error: 'Usuario ya existe',
@@ -62,10 +62,19 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // 🔒 Encriptar contraseña
+    // Encriptar contraseña
     const passwordHash = await hashPassword(password);
 
-    // ✅ Crear trabajador
+    // Validar phoneNumber
+    if (!userData.phoneNumber) {
+      return res.status(400).json({
+        error: 'Falta phoneNumber',
+        message: 'Debes enviar phoneNumber'
+      });
+    }
+    const phoneNumberStr = String(userData.phoneNumber);
+
+    // Crear trabajador
     const worker = await prisma.worker.create({
       data: {
         email,
@@ -76,7 +85,7 @@ export const register = async (req: Request, res: Response) => {
         secondLastname: userData.secondLastname,
         role: roleValue,
         status: userData.status ?? 'active',
-        phoneNumber: String(userData.phoneNumber),
+        phoneNumber: phoneNumberStr,
         fechaNacimiento: birthDate,
         photoUrl: userData.photoUrl ?? null
       },
@@ -91,7 +100,7 @@ export const register = async (req: Request, res: Response) => {
       }
     });
 
-    // 🔑 Generar token
+    // Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
@@ -114,7 +123,7 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al registrar trabajador',
       message: 'Ocurrió un error durante el registro'
     });
@@ -172,7 +181,6 @@ export const login = async (req: Request, res: Response) => {
 
     const { passwordHash, ...workerData } = worker;
 
-    // Si es worker, verificar vehículo asignado
     if (worker.role === 'worker') {
       const assignedVehicle = await prisma.vehicle.findFirst({
         where: {
@@ -195,8 +203,7 @@ export const login = async (req: Request, res: Response) => {
       if (!assignedVehicle) {
         return res.status(403).json({
           error: 'Sin vehículo asignado',
-          message:
-            'No tienes un vehículo asignado. No puedes ingresar a la app móvil hasta que se te asigne uno.'
+          message: 'No tienes un vehículo asignado. No puedes ingresar a la app móvil hasta que se te asigne uno.'
         });
       }
 
@@ -208,7 +215,6 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Admin/Supervisor
     return res.json({
       message: 'Login exitoso',
       data: stringifyBigInts(workerData),
@@ -225,7 +231,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al iniciar sesión',
       message: 'Ocurrió un error durante el login'
     });
@@ -281,7 +287,7 @@ export const getProfile = async (
   } catch (error) {
     console.error('Get profile error:', error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al obtener perfil',
       message: 'Ocurrió un error al obtener el perfil'
     });
