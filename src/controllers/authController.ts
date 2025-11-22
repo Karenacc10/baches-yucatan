@@ -18,102 +18,95 @@ import {
 =========================== */
 export const register = async (req: Request, res: Response) => {
   try {
-    // ✅ Validar body con Zod
-    const validatedData = createWorkerSchema.parse(req.body);
-    const { email, password, ...userData } = validatedData;
+    const validatedData = createWorkerSchema.parse(req.body)
+    const { email, password, ...userData } = validatedData
 
-  // ✅ CONVERTIR Y VALIDAR fechaNacimiento
-  let birthDate: Date | null = null;
+    // ✅ Convertir fecha
+    let birthDate: Date | null = null
 
-  if (userData.fechaNacimiento) {
-    birthDate = new Date(userData.fechaNacimiento);
+    if (userData.fechaNacimiento) {
+      birthDate = new Date(userData.fechaNacimiento)
 
-    if (isNaN(birthDate.getTime())) {
-      return res.status(400).json({
-        error: 'Fecha inválida',
-        message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
-      });
-    }
-  }
-
-
-    // 📌 Verificar si ya existe
-    const existingWorker = await prisma.worker.findUnique({
-      where: { email }
-    });
-
-    if (existingWorker) {
-      return res.status(409).json({
-        error: 'Usuario ya existe',
-        message: 'Ya existe un trabajador con este correo'
-      });
-    }
-
-    // 🔒 Encriptar contraseña
-    const passwordHash = await hashPassword(password);
-
-    // ✅ Crear trabajador
-    const worker = await prisma.worker.create({
-    data: {
-      email,
-      passwordHash,
-
-      name: userData.name,
-      secondName: userData.secondName ?? null,
-      lastname: userData.lastname,
-      secondLastname: userData.secondLastname,
-
-      role: Role[userData.role as keyof typeof Role],
-
-      status: userData.status ?? 'active',
-
-      phoneNumber: userData.phoneNumber,
-      fechaNacimiento: birthDate!,
-
-
-      photoUrl: userData.photoUrl ?? null
-    },
-
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        lastname: true,
-        role: true,
-        status: true,
-        createdAt: true
+      if (isNaN(birthDate.getTime())) {
+        return res.status(400).json({
+          error: 'Fecha inválida',
+          message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
+        })
       }
+    }
+
+    // ✅ Normalizar teléfono (ARREGLA EL ERROR 22P03)
+    // Normalizar teléfono y validar fecha
+const phone = userData.phoneNumber
+  ? userData.phoneNumber.toString().trim()
+  : null;
+
+let birthDate: Date | null = null;
+if (userData.fechaNacimiento) {
+  birthDate = new Date(userData.fechaNacimiento);
+  if (isNaN(birthDate.getTime())) {
+    return res.status(400).json({
+      error: 'Fecha inválida',
+      message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
     });
+  }
+}
+
+const worker = await prisma.worker.create({
+  data: {
+    email,
+    passwordHash,
+    name: userData.name,
+    secondName: userData.secondName ?? null,
+    lastname: userData.lastname,
+    secondLastname: userData.secondLastname ?? null,
+    role: Role[userData.role as keyof typeof Role], // debe ser uno de los enums
+    status: userData.status ?? 'active',
+    phoneNumber: phone!,
+    fechaNacimiento: birthDate!,
+    photoUrl: userData.photoUrl ?? null
+  },
+  select: {
+    id: true,
+    email: true,
+    name: true,
+    lastname: true,
+    role: true,
+    status: true,
+    createdAt: true
+  }
+});
+
 
     // 🔑 Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
       role: worker.role
-    });
+    })
 
     return res.status(201).json({
       message: 'Trabajador registrado exitosamente',
       data: worker,
       token
-    });
+    })
 
   } catch (error: any) {
-    console.error('Register error:', error);
+    console.error('Register error:', error)
 
     if (error.name === 'ZodError') {
       return res.status(400).json({
         error: 'Datos inválidos',
         details: error.errors
-      });
+      })
     }
 
     res.status(500).json({
       error: 'Error al registrar trabajador',
       message: 'Ocurrió un error durante el registro'
-    });
+    })
   }
-};
+}
 
 
 /* ===========================
