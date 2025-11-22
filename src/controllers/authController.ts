@@ -22,15 +22,20 @@ export const register = async (req: Request, res: Response) => {
     const validatedData = createWorkerSchema.parse(req.body);
     const { email, password, ...userData } = validatedData;
 
-    // ✅ Convertir fecha (EVITA el error 22P03)
-    const birthDate = new Date(userData.fechaNacimiento);
+  // ✅ CONVERTIR Y VALIDAR fechaNacimiento
+  let birthDate: Date | null = null;
+
+  if (userData.fechaNacimiento) {
+    birthDate = new Date(userData.fechaNacimiento);
 
     if (isNaN(birthDate.getTime())) {
       return res.status(400).json({
-        error: "Formato de fecha inválido",
-        message: "Usa este formato: 2000-05-15T00:00:00.000Z"
+        error: 'Fecha inválida',
+        message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
       });
     }
+  }
+
 
     // 📌 Verificar si ya existe
     const existingWorker = await prisma.worker.findUnique({
@@ -63,7 +68,8 @@ export const register = async (req: Request, res: Response) => {
       status: userData.status ?? 'active',
 
       phoneNumber: userData.phoneNumber,
-      fechaNacimiento: birthDate,
+      fechaNacimiento: birthDate!,
+
 
       photoUrl: userData.photoUrl ?? null
     },
