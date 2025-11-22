@@ -72,7 +72,6 @@ model Worker {
   secondLastname    String
   phoneNumber       Int
   fechaNacimiento   DateTime
-
   status            WorkerStatus  @default(active)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
