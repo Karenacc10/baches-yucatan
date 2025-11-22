@@ -22,11 +22,8 @@ export const register = async (req: Request, res: Response) => {
     const validatedData = createWorkerSchema.parse(req.body);
     const { email, password, ...userData } = validatedData;
 
-    // Normalizar teléfono
-    const phone = userData.phoneNumber?.toString().trim() ?? null;
-
-    // Validar fechaNacimiento
-    let birthDate: Date | null = null;
+    // 📌 Validar fechaNacimiento
+    let birthDate: Date;
     if (userData.fechaNacimiento) {
       birthDate = new Date(userData.fechaNacimiento);
       if (isNaN(birthDate.getTime())) {
@@ -35,10 +32,29 @@ export const register = async (req: Request, res: Response) => {
           message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
         });
       }
+    } else {
+      return res.status(400).json({
+        error: 'Falta fechaNacimiento',
+        message: 'Debes enviar fechaNacimiento'
+      });
     }
 
-    // Verificar si ya existe
-    const existingWorker = await prisma.worker.findUnique({ where: { email } });
+    // 📌 Validar role
+    const roleValue: Role = (() => {
+      switch (userData.role?.toLowerCase()) {
+        case 'admin': return Role.admin;
+        case 'supervisor': return Role.supervisor;
+        case 'worker': return Role.worker;
+        default:
+          return Role.worker; // valor por defecto
+      }
+    })();
+
+    // 📌 Verificar si ya existe
+    const existingWorker = await prisma.worker.findUnique({
+      where: { email }
+    });
+
     if (existingWorker) {
       return res.status(409).json({
         error: 'Usuario ya existe',
@@ -46,10 +62,10 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // Encriptar contraseña
+    // 🔒 Encriptar contraseña
     const passwordHash = await hashPassword(password);
 
-    // Crear trabajador
+    // ✅ Crear trabajador
     const worker = await prisma.worker.create({
       data: {
         email,
@@ -57,11 +73,11 @@ export const register = async (req: Request, res: Response) => {
         name: userData.name,
         secondName: userData.secondName ?? null,
         lastname: userData.lastname,
-        secondLastname: userData.secondLastname ?? null,
-        role: Role[userData.role as keyof typeof Role],
+        secondLastname: userData.secondLastname,
+        role: roleValue,
         status: userData.status ?? 'active',
-        phoneNumber: phone,
-        fechaNacimiento: birthDate!,
+        phoneNumber: String(userData.phoneNumber),
+        fechaNacimiento: birthDate,
         photoUrl: userData.photoUrl ?? null
       },
       select: {
@@ -75,7 +91,7 @@ export const register = async (req: Request, res: Response) => {
       }
     });
 
-    // Generar token
+    // 🔑 Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
@@ -98,7 +114,7 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Error al registrar trabajador',
       message: 'Ocurrió un error durante el registro'
     });
@@ -139,8 +155,8 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar contraseña
     const isValidPassword = await comparePassword(password, worker.passwordHash);
+
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Credenciales inválidas',
@@ -156,12 +172,15 @@ export const login = async (req: Request, res: Response) => {
 
     const { passwordHash, ...workerData } = worker;
 
-    // Si es WORKER, verificar vehículo asignado
+    // Si es worker, verificar vehículo asignado
     if (worker.role === 'worker') {
       const assignedVehicle = await prisma.vehicle.findFirst({
         where: {
           assignments: {
-            some: { workerId: worker.id, active: true }
+            some: {
+              workerId: worker.id,
+              active: true
+            }
           }
         },
         select: {
@@ -206,7 +225,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Error al iniciar sesión',
       message: 'Ocurrió un error durante el login'
     });
@@ -216,7 +235,10 @@ export const login = async (req: Request, res: Response) => {
 /* ===========================
    GET PROFILE
 =========================== */
-export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
+export const getProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({
@@ -259,7 +281,7 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error('Get profile error:', error);
 
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Error al obtener perfil',
       message: 'Ocurrió un error al obtener el perfil'
     });
