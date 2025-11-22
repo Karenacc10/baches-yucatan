@@ -8,7 +8,6 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
     const assignmentData = req.body;
     const { workerId, vehicleId } = assignmentData;
 
-    // Validate worker and vehicle exist
     const [worker, vehicle] = await Promise.all([
       prisma.worker.findUnique({ where: { id: workerId } }),
       prisma.vehicle.findUnique({ where: { id: vehicleId } })
@@ -22,7 +21,6 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
       return res.status(404).json({ error: 'Vehicle not found', message: 'El vehículo especificado no existe' });
     }
 
-    // Disallow admin/supervisor from being assigned vehicles
     if (worker.role === 'admin' || worker.role === 'supervisor') {
       return res.status(403).json({
         error: 'Asignación no permitida',
@@ -30,21 +28,23 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // If vehicle already assigned to someone else, block
-    if (vehicle.assignedWorkerId && vehicle.assignedWorkerId !== workerId) {
-      const assignedWorker = await prisma.worker.findUnique({ where: { id: vehicle.assignedWorkerId } });
+    // Verificar si ese vehículo ya está asignado en otra asignación activa
+    const existingAssignment = await prisma.assignment.findFirst({
+      where: {
+        vehicleId,
+        progressStatus: { in: ['not_started', 'in_progress'] }
+      },
+      include: {
+        worker: {
+          select: { name: true, lastname: true }
+        }
+      }
+    });
+
+    if (existingAssignment) {
       return res.status(409).json({
         error: 'Vehículo ya asignado',
-        message: `El vehículo con placa ${vehicle.licensePlate} ya está asignado al trabajador ${assignedWorker?.name ?? 'desconocido'} ${assignedWorker?.lastname ?? ''}`
-      });
-    }
-
-    // Prevent same worker having another vehicle with the same plate (safety check)
-    const duplicate = await prisma.vehicle.findFirst({ where: { assignedWorkerId: workerId, licensePlate: vehicle.licensePlate, NOT: { id: vehicle.id } } });
-    if (duplicate) {
-      return res.status(409).json({
-        error: 'Placa duplicada para trabajador',
-        message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicle.licensePlate}`
+        message: `Este vehículo ya está asignado a ${existingAssignment.worker?.name} ${existingAssignment.worker?.lastname}`
       });
     }
 
@@ -88,10 +88,13 @@ export const createAssignment = async (req: AuthenticatedRequest, res: Response)
 export const getAssignments = async (req: Request, res: Response) => {
   try {
     const { page, limit, progressStatus, priority, workerId, vehicleId } = req.query;
-    const { skip, take, page: pageNum, limit: limitNum } = getPagination(page as string, limit as string);
+    const { skip, take, page: pageNum, limit: limitNum } = getPagination(
+      page as string,
+      limit as string
+    );
 
     const where: any = {};
-    
+
     if (progressStatus) where.progressStatus = progressStatus;
     if (priority) where.priority = priority;
     if (workerId) where.workerId = workerId;
@@ -193,36 +196,49 @@ export const updateAssignment = async (req: AuthenticatedRequest, res: Response)
     const { id } = req.params;
     const updateData = req.body;
 
-    // If marking as completed, set completedAt
     if (updateData.progressStatus === 'completed' && !updateData.completedAt) {
       updateData.completedAt = new Date();
     }
 
-    // If changing worker or vehicle, perform same validations as on create
     if (updateData.workerId || updateData.vehicleId) {
       const current = await prisma.assignment.findUnique({ where: { id } });
-      const newWorkerId = updateData.workerId ?? current?.workerId;
-      const newVehicleId = updateData.vehicleId ?? current?.vehicleId;
+
+      if (!current) {
+        return res.status(404).json({ error: 'Asignación no encontrada' });
+      }
+
+      const newWorkerId = updateData.workerId ?? current.workerId;
+      const newVehicleId = updateData.vehicleId ?? current.vehicleId;
 
       const [worker, vehicle] = await Promise.all([
         prisma.worker.findUnique({ where: { id: newWorkerId } }),
         prisma.vehicle.findUnique({ where: { id: newVehicleId } })
       ]);
 
-      if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
-      if (!vehicle) return res.status(404).json({ error: 'Vehicle not found', message: 'El vehículo especificado no existe' });
+      if (!worker) return res.status(404).json({ error: 'Worker not found' });
+      if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
       if (worker.role === 'admin' || worker.role === 'supervisor') {
-        return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
+        return res.status(403).json({
+          error: 'Asignación no permitida',
+          message: 'Este rol no puede tener vehículos asignados'
+        });
       }
 
-      if (vehicle.assignedWorkerId && vehicle.assignedWorkerId !== newWorkerId) {
-        const assignedWorker = await prisma.worker.findUnique({ where: { id: vehicle.assignedWorkerId } });
-        return res.status(409).json({ error: 'Vehículo ya asignado', message: `El vehículo con placa ${vehicle.licensePlate} ya está asignado al trabajador ${assignedWorker?.name ?? 'desconocido'} ${assignedWorker?.lastname ?? ''}` });
-      }
+      const existingAssignment = await prisma.assignment.findFirst({
+        where: {
+          vehicleId: newVehicleId,
+          NOT: { id },
+          progressStatus: { in: ['not_started', 'in_progress'] }
+        }
+      });
 
-      const duplicate = await prisma.vehicle.findFirst({ where: { assignedWorkerId: newWorkerId, licensePlate: vehicle.licensePlate, NOT: { id: vehicle.id } } });
-      if (duplicate) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicle.licensePlate}` });
+      if (existingAssignment) {
+        return res.status(409).json({
+          error: 'Vehículo ya asignado',
+          message: 'Este vehículo ya tiene una asignación activa'
+        });
+      }
     }
 
     const assignment = await prisma.assignment.update({
@@ -257,8 +273,7 @@ export const updateAssignment = async (req: AuthenticatedRequest, res: Response)
   } catch (error) {
     console.error('Update assignment error:', error);
     res.status(500).json({
-      error: 'Error al actualizar asignación',
-      message: 'Ocurrió un error al actualizar la asignación'
+      error: 'Error al actualizar asignación'
     });
   }
 };
@@ -279,9 +294,7 @@ export const deleteAssignment = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    await prisma.assignment.delete({
-      where: { id }
-    });
+    await prisma.assignment.delete({ where: { id } });
 
     res.json({
       message: 'Asignación eliminada exitosamente'
@@ -289,8 +302,7 @@ export const deleteAssignment = async (req: AuthenticatedRequest, res: Response)
   } catch (error) {
     console.error('Delete assignment error:', error);
     res.status(500).json({
-      error: 'Error al eliminar asignación',
-      message: 'Ocurrió un error al eliminar la asignación'
+      error: 'Error al eliminar asignación'
     });
   }
 };
@@ -298,12 +310,15 @@ export const deleteAssignment = async (req: AuthenticatedRequest, res: Response)
 export const getMyAssignments = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { page, limit, progressStatus } = req.query;
-    const { skip, take, page: pageNum, limit: limitNum } = getPagination(page as string, limit as string);
+    const { skip, take, page: pageNum, limit: limitNum } = getPagination(
+      page as string,
+      limit as string
+    );
 
     const where: any = {
       workerId: req.user?.id
     };
-    
+
     if (progressStatus) where.progressStatus = progressStatus;
 
     const [assignments, total] = await Promise.all([
@@ -331,8 +346,7 @@ export const getMyAssignments = async (req: AuthenticatedRequest, res: Response)
   } catch (error) {
     console.error('Get my assignments error:', error);
     res.status(500).json({
-      error: 'Error al obtener mis asignaciones',
-      message: 'Ocurrió un error al obtener las asignaciones'
+      error: 'Error al obtener mis asignaciones'
     });
   }
 };
@@ -381,8 +395,7 @@ export const getAssignmentStats = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get assignment stats error:', error);
     res.status(500).json({
-      error: 'Error al obtener estadísticas',
-      message: 'Ocurrió un error al obtener las estadísticas de asignaciones'
+      error: 'Error al obtener estadísticas'
     });
   }
 };

@@ -6,34 +6,23 @@ import { VehicleQuery, AuthenticatedRequest } from '../types';
 export const createVehicle = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const vehicleData = req.body;
-    // If assignedWorker provided, validate role and conflicts
-    if (vehicleData.assignedWorkerId) {
-      const worker = await prisma.worker.findUnique({ where: { id: vehicleData.assignedWorkerId } });
-      if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
-      if (worker.role === 'admin' || worker.role === 'supervisor') {
-        return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
-      }
 
-      // Ensure the worker doesn't already have a vehicle with same plate
-      if (vehicleData.licensePlate) {
-        const dup = await prisma.vehicle.findFirst({ where: { assignedWorkerId: vehicleData.assignedWorkerId, licensePlate: vehicleData.licensePlate } });
-        if (dup) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicleData.licensePlate}` });
+    // Validar placa duplicada
+    if (vehicleData.licensePlate) {
+      const dup = await prisma.vehicle.findUnique({
+        where: { licensePlate: vehicleData.licensePlate }
+      });
+
+      if (dup) {
+        return res.status(409).json({
+          error: 'Placa duplicada',
+          message: `Ya existe un vehículo con la placa ${vehicleData.licensePlate}`
+        });
       }
     }
 
     const vehicle = await prisma.vehicle.create({
-      data: vehicleData,
-      include: {
-        assignedWorker: {
-          select: {
-            id: true,
-            name: true,
-            lastname: true,
-            email: true,
-            phoneNumber: true
-          }
-        }
-      }
+      data: vehicleData
     });
 
     res.status(201).json({
@@ -55,9 +44,14 @@ export const getVehicles = async (req: Request, res: Response) => {
     const { skip, take, page: pageNum, limit: limitNum } = getPagination(page, limit);
 
     const where: any = {};
-    
+
     if (status) where.status = status;
-    if (licensePlate) where.licensePlate = { contains: licensePlate, mode: 'insensitive' };
+    if (licensePlate) {
+      where.licensePlate = {
+        contains: licensePlate,
+        mode: 'insensitive'
+      };
+    }
 
     const [vehicles, total] = await Promise.all([
       prisma.vehicle.findMany({
@@ -66,15 +60,6 @@ export const getVehicles = async (req: Request, res: Response) => {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          assignedWorker: {
-            select: {
-              id: true,
-              name: true,
-              lastname: true,
-              email: true,
-              phoneNumber: true
-            }
-          },
           _count: {
             select: {
               reports: true,
@@ -110,9 +95,6 @@ export const getVehicleByPlate = async (req: Request, res: Response) => {
     const vehicle = await prisma.vehicle.findUnique({
       where: { licensePlate },
       include: {
-        assignedWorker: {
-          select: { id: true, name: true, lastname: true, email: true }
-        },
         reports: true,
         assignments: true
       }
@@ -152,16 +134,6 @@ export const getVehicleById = async (req: Request, res: Response) => {
     const vehicle = await prisma.vehicle.findUnique({
       where: { id },
       include: {
-        assignedWorker: {
-          select: {
-            id: true,
-            name: true,
-            lastname: true,
-            email: true,
-            phoneNumber: true,
-            role: true
-          }
-        },
         reports: {
           select: {
             id: true,
@@ -207,7 +179,7 @@ export const getVehicleById = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Vehículo obtenido exitosamente',
-      data: vehicle
+      data: stringifyBigInts(vehicle)
     });
   } catch (error) {
     console.error('Get vehicle error:', error);
@@ -230,40 +202,26 @@ export const updateVehicle = async (req: AuthenticatedRequest, res: Response) =>
       });
     }
 
-    // If assignedWorkerId being set/changed, validate
-    if (updateData.assignedWorkerId !== undefined) {
-      if (updateData.assignedWorkerId === null) {
-        // unassigning, OK
-      } else {
-        const worker = await prisma.worker.findUnique({ where: { id: updateData.assignedWorkerId } });
-        if (!worker) return res.status(404).json({ error: 'Worker not found', message: 'El trabajador especificado no existe' });
-        if (worker.role === 'admin' || worker.role === 'supervisor') {
-          return res.status(403).json({ error: 'Asignación no permitida', message: `El trabajador ${worker.name} ${worker.lastname} con rol ${worker.role} no puede tener vehículos asignados` });
+    // Validar placa duplicada (si se cambia)
+    if (updateData.licensePlate) {
+      const dup = await prisma.vehicle.findFirst({
+        where: {
+          licensePlate: updateData.licensePlate,
+          NOT: { id }
         }
+      });
 
-        // Ensure the worker doesn't already have another vehicle with same plate
-        const vehicleToCheck = updateData.licensePlate ? updateData.licensePlate : (await prisma.vehicle.findUnique({ where: { id } }))?.licensePlate;
-        if (vehicleToCheck) {
-          const dup = await prisma.vehicle.findFirst({ where: { assignedWorkerId: updateData.assignedWorkerId, licensePlate: vehicleToCheck, NOT: { id } } });
-          if (dup) return res.status(409).json({ error: 'Placa duplicada para trabajador', message: `El trabajador ${worker.name} ${worker.lastname} ya tiene asignado un vehículo con placa ${vehicleToCheck}` });
-        }
+      if (dup) {
+        return res.status(409).json({
+          error: 'Placa duplicada',
+          message: `Ya existe otro vehículo con la placa ${updateData.licensePlate}`
+        });
       }
     }
 
     const vehicle = await prisma.vehicle.update({
       where: { id },
-      data: updateData,
-      include: {
-        assignedWorker: {
-          select: {
-            id: true,
-            name: true,
-            lastname: true,
-            email: true,
-            phoneNumber: true
-          }
-        }
-      }
+      data: updateData
     });
 
     res.json({
@@ -290,7 +248,6 @@ export const deleteVehicle = async (req: AuthenticatedRequest, res: Response) =>
       });
     }
 
-    // Check if vehicle has active assignments
     const activeAssignments = await prisma.assignment.count({
       where: {
         vehicleId: id,
@@ -325,8 +282,7 @@ export const getAvailableVehicles = async (req: Request, res: Response) => {
   try {
     const vehicles = await prisma.vehicle.findMany({
       where: {
-        status: 'active',
-        assignedWorker: null
+        status: 'active'
       },
       select: {
         id: true,

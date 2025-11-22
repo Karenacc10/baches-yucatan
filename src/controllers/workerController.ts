@@ -3,11 +3,13 @@ import prisma from '../utils/prisma';
 import { getPagination, formatResponse, hashPassword, stringifyBigInts } from '../utils/helpers';
 import { WorkerQuery, AuthenticatedRequest } from '../types';
 
+/* ========================
+   CREAR TRABAJADOR
+======================== */
 export const createWorker = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { email, password, ...workerData } = req.body;
 
-    // Check if worker already exists
     const existingWorker = await prisma.worker.findUnique({
       where: { email }
     });
@@ -19,10 +21,8 @@ export const createWorker = async (req: AuthenticatedRequest, res: Response) => 
       });
     }
 
-    // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Coerce phoneNumber to BigInt if provided
     if (workerData.phoneNumber !== undefined && workerData.phoneNumber !== null) {
       workerData.phoneNumber = BigInt(String(workerData.phoneNumber));
     }
@@ -63,13 +63,17 @@ export const createWorker = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
+
+/* ========================
+   OBTENER TODOS
+======================== */
 export const getWorkers = async (req: Request, res: Response) => {
   try {
     const { page, limit, role, status, name } = req.query as WorkerQuery;
     const { skip, take, page: pageNum, limit: limitNum } = getPagination(page, limit);
 
     const where: any = {};
-    
+
     if (role) where.role = role;
     if (status) where.status = status;
     if (name) {
@@ -102,12 +106,12 @@ export const getWorkers = async (req: Request, res: Response) => {
           _count: {
             select: {
               reports: true,
-              assignments: true,
-              vehicleAssigned: true
+              assignments: true
             }
           }
         }
       }),
+
       prisma.worker.count({ where })
     ]);
 
@@ -121,6 +125,10 @@ export const getWorkers = async (req: Request, res: Response) => {
   }
 };
 
+
+/* ========================
+   OBTENER POR ID
+======================== */
 export const getWorkerById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -141,16 +149,7 @@ export const getWorkerById = async (req: Request, res: Response) => {
         photoUrl: true,
         createdAt: true,
         updatedAt: true,
-        vehicleAssigned: {
-          select: {
-            id: true,
-            licensePlate: true,
-            model: true,
-            year: true,
-            color: true,
-            status: true
-          }
-        },
+
         reports: {
           select: {
             id: true,
@@ -165,6 +164,7 @@ export const getWorkerById = async (req: Request, res: Response) => {
           orderBy: { createdAt: 'desc' },
           take: 10
         },
+
         assignments: {
           select: {
             id: true,
@@ -206,17 +206,19 @@ export const getWorkerById = async (req: Request, res: Response) => {
   }
 };
 
+
+/* ========================
+   ACTUALIZAR
+======================== */
 export const updateWorker = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { password, ...updateData } = req.body;
 
-    // If password is being updated, hash it
     if (password) {
       updateData.passwordHash = await hashPassword(password);
     }
 
-    // Coerce phoneNumber to BigInt if provided
     if (updateData.phoneNumber !== undefined && updateData.phoneNumber !== null) {
       updateData.phoneNumber = BigInt(String(updateData.phoneNumber));
     }
@@ -254,11 +256,14 @@ export const updateWorker = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
+
+/* ========================
+   ELIMINAR
+======================== */
 export const deleteWorker = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Check if worker has active assignments
     const activeAssignments = await prisma.assignment.count({
       where: {
         workerId: id,
@@ -289,6 +294,10 @@ export const deleteWorker = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
+
+/* ========================
+    DISPONIBLES
+======================== */
 export const getAvailableWorkers = async (req: Request, res: Response) => {
   try {
     const { role } = req.query;
