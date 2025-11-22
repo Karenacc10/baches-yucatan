@@ -24,7 +24,7 @@ async function createAdminUser() {
         name: 'Administrador',
         lastname: 'Sistema',
         secondLastname: 'Baches',
-        phoneNumber: 9928765432,
+        phoneNumber: "+5210000000000",
         fechaNacimiento: new Date('1980-01-01'),
         status: 'active'
       }
