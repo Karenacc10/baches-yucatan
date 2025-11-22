@@ -8,6 +8,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+
 //BASE DE DATOS PARA GESTION DE BACHES
 
 model Report {
