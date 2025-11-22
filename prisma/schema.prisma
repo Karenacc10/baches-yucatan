@@ -1,3 +1,4 @@
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -70,7 +71,7 @@ model Worker {
   secondName        String?
   lastname          String
   secondLastname    String
-  phoneNumber       Int
+  phoneNumber       String
   fechaNacimiento   DateTime
   status            WorkerStatus  @default(active)
   createdAt         DateTime      @default(now())

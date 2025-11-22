@@ -24,7 +24,7 @@ export const createWorker = async (req: AuthenticatedRequest, res: Response) => 
     const passwordHash = await hashPassword(password);
 
     if (workerData.phoneNumber !== undefined && workerData.phoneNumber !== null) {
-      workerData.phoneNumber = BigInt(String(workerData.phoneNumber));
+      workerData.phoneNumber = (String(workerData.phoneNumber));
     }
 
     const worker = await prisma.worker.create({
@@ -220,7 +220,7 @@ export const updateWorker = async (req: AuthenticatedRequest, res: Response) => 
     }
 
     if (updateData.phoneNumber !== undefined && updateData.phoneNumber !== null) {
-      updateData.phoneNumber = BigInt(String(updateData.phoneNumber));
+      updateData.phoneNumber = String(String(updateData.phoneNumber));
     }
 
     const worker = await prisma.worker.update({

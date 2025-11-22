@@ -16,7 +16,8 @@ export const createReportSchema = z.object({
   reportedByWorkerId: z.string().uuid().optional(),
   severity: z.enum(['low', 'medium', 'high']),
   comments: z.string().optional(),
-  images: z.string(z.string()).optional()
+  images: z.array(z.string()).optional() // ← corregido
+  // Si quieres validar que sean URLs: z.array(z.string().url()).optional()
 });
 
 export const updateReportSchema = z.object({
@@ -31,7 +32,7 @@ export const updateReportSchema = z.object({
   status: z.enum(['reported', 'in_progress', 'resolved']).optional(),
   severity: z.enum(['low', 'medium', 'high']).optional(),
   comments: z.string().optional(),
-  images: z.string(z.string()).optional()
+  images: z.array(z.string()).optional() // ← corregido
 });
 
 // Vehicle
@@ -53,7 +54,6 @@ export const updateVehicleSchema = z.object({
 });
 
 // Worker
-
 export const createWorkerSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'worker']),
   email: z.string().email(),
@@ -62,12 +62,11 @@ export const createWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1, 'Last name is required'),
   secondLastname: z.string().min(1, 'Second lastname is required'),
-  phoneNumber: z.coerce.number().int('Phone must be an integer'), // convierte desde string si llega "9991234567"
-  fechaNacimiento: z.coerce.date(), // requerido, convierte "YYYY-MM-DD" a Date
+  phoneNumber: z.string().min(7).max(20), // ← ahora string (puedes afinar con regex)
+  fechaNacimiento: z.coerce.date(),
   photoUrl: z.string().url().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional()
 });
-
 
 export const updateWorkerSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'worker']).optional(),
@@ -76,7 +75,7 @@ export const updateWorkerSchema = z.object({
   secondName: z.string().optional(),
   lastname: z.string().min(1).optional(),
   secondLastname: z.string().optional(),
-  phoneNumber: z.number().optional(),
+  phoneNumber: z.string().min(7).max(20).optional(), // ← string
   fechaNacimiento: z.coerce.date().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   photoUrl: z.string().url().optional()
@@ -97,8 +96,6 @@ export const updateAssignmentSchema = z.object({
   notes: z.string().optional(),
   completedAt: z.coerce.date().optional()
 });
-
-
 
 // Login
 export const loginSchema = z.object({

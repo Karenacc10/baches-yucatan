@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { hashPassword, comparePassword, generateToken, stringifyBigInts } from '../utils/helpers';
 import { AuthenticatedRequest } from '../types';
+import { string } from 'zod';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -38,7 +39,7 @@ const worker = await prisma.worker.create({
 
     // REQUERIDOS: asegúrate de proveerlos SIEMPRE
     secondLastname: userData.secondLastname, // <-- requerido por el schema
-    phoneNumber: Number(userData.phoneNumber), // <-- el schema espera Int
+    phoneNumber: string(userData.phoneNumber), // <-- el schema espera Int
     fechaNacimiento: new Date(userData.fechaNacimiento), // <-- requerido
   },
   select: {
