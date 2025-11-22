@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
+import { Role } from '@prisma/client';
 import {
   hashPassword,
   comparePassword,
@@ -21,6 +22,16 @@ export const register = async (req: Request, res: Response) => {
     const validatedData = createWorkerSchema.parse(req.body);
     const { email, password, ...userData } = validatedData;
 
+    // ✅ Convertir fecha (EVITA el error 22P03)
+    const birthDate = new Date(userData.fechaNacimiento);
+
+    if (isNaN(birthDate.getTime())) {
+      return res.status(400).json({
+        error: "Formato de fecha inválido",
+        message: "Usa este formato: 2000-05-15T00:00:00.000Z"
+      });
+    }
+
     // 📌 Verificar si ya existe
     const existingWorker = await prisma.worker.findUnique({
       where: { email }
@@ -38,23 +49,25 @@ export const register = async (req: Request, res: Response) => {
 
     // ✅ Crear trabajador
     const worker = await prisma.worker.create({
-      data: {
-        email,
-        passwordHash,
+    data: {
+      email,
+      passwordHash,
 
-        name: userData.name,
-        secondName: userData.secondName ?? null,
-        lastname: userData.lastname,
-        secondLastname: userData.secondLastname,
+      name: userData.name,
+      secondName: userData.secondName ?? null,
+      lastname: userData.lastname,
+      secondLastname: userData.secondLastname,
 
-        role: userData.role,
-        status: userData.status ?? 'active',
+      role: Role[userData.role as keyof typeof Role],
 
-        phoneNumber: userData.phoneNumber, // ✅ String
-        fechaNacimiento: new Date(userData.fechaNacimiento),
+      status: userData.status ?? 'active',
 
-        photoUrl: userData.photoUrl ?? null
-      },
+      phoneNumber: userData.phoneNumber,
+      fechaNacimiento: birthDate,
+
+      photoUrl: userData.photoUrl ?? null
+    },
+
       select: {
         id: true,
         email: true,
