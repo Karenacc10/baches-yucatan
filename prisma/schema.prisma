@@ -50,8 +50,6 @@ model Vehicle {
   // ❗ Ya NO tiene assignedWorker directo
   // Ahora las asignaciones se manejan por la tabla Assignment (historial)
 
-  assignerWorkersIds String[]
-
   status             VehicleStatus @default(active)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt

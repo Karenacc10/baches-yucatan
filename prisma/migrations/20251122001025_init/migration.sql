@@ -51,7 +51,6 @@ CREATE TABLE "Vehicle" (
     "year" INTEGER,
     "color" TEXT,
     "corporation" TEXT,
-    "assignerWorkersIds" TEXT[],
     "status" "VehicleStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

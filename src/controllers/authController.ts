@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response) => {
     const passwordHash = await hashPassword(password);
 
     // Create worker
-   const worker = await prisma.worker.create({
+const worker = await prisma.worker.create({
   data: {
     email,
     passwordHash,
@@ -31,11 +31,15 @@ export const register = async (req: Request, res: Response) => {
     lastname: userData.lastname,
     role: userData.role,
     status: userData.status ?? 'active',
+
+    // Opcionales
     ...(userData.secondName && { secondName: userData.secondName }),
-    ...(userData.secondLastname && { secondLastname: userData.secondLastname }),
     ...(userData.photoUrl && { photoUrl: userData.photoUrl }),
-    ...(userData.phoneNumber && { phoneNumber: String(userData.phoneNumber) }),
-    ...(userData.fechaNacimiento && { fechaNacimiento: new Date(userData.fechaNacimiento) })
+
+    // REQUERIDOS: asegúrate de proveerlos SIEMPRE
+    secondLastname: userData.secondLastname, // <-- requerido por el schema
+    phoneNumber: Number(userData.phoneNumber), // <-- el schema espera Int
+    fechaNacimiento: new Date(userData.fechaNacimiento), // <-- requerido
   },
   select: {
     id: true,
@@ -123,7 +127,7 @@ export const login = async (req: Request, res: Response) => {
     // Si el rol es 'worker', requiere vehículo asignado para permitir el acceso móvil
     if (worker.role === 'worker') {
       const assignedVehicle = await prisma.vehicle.findFirst({
-        where: { assignedWorkerId: worker.id },
+        where: { assignments: { some: { workerId: worker.id, active: true } } },
         select: { id: true, licensePlate: true, model: true, year: true, color: true }
       });
 

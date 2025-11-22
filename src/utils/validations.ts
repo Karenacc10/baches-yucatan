@@ -53,6 +53,7 @@ export const updateVehicleSchema = z.object({
 });
 
 // Worker
+
 export const createWorkerSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'worker']),
   email: z.string().email(),
@@ -60,12 +61,13 @@ export const createWorkerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   secondName: z.string().optional(),
   lastname: z.string().min(1, 'Last name is required'),
-  secondLastname: z.string().optional(),
-  phoneNumber: z.number().optional(),
-  fechaNacimiento: z.coerce.date().optional(),
+  secondLastname: z.string().min(1, 'Second lastname is required'),
+  phoneNumber: z.coerce.number().int('Phone must be an integer'), // convierte desde string si llega "9991234567"
+  fechaNacimiento: z.coerce.date(), // requerido, convierte "YYYY-MM-DD" a Date
   photoUrl: z.string().url().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional()
 });
+
 
 export const updateWorkerSchema = z.object({
   role: z.enum(['admin', 'supervisor', 'worker']).optional(),
