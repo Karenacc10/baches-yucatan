@@ -1,4 +1,3 @@
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -8,104 +7,103 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 //BASE DE DATOS PARA GESTION DE BACHES
 
 model Report {
-  id                  String        @id @default(uuid())
+  id String @id @default(uuid())
 
-  latitude            Float
-  longitude           Float
-  street              String?
-  neighborhood        String?
-  city                String?
-  state               String?
-  postalCode          String?
-  description         String?
+  latitude     Float
+  longitude    Float
+  street       String?
+  neighborhood String?
+  city         String?
+  state        String?
+  postalCode   String?
+  description  String?
 
-  date                DateTime
+  date DateTime
 
-  reportedByVehicle   Vehicle?      @relation("VehicleReports", fields: [reportedByVehicleId], references: [id])
+  reportedByVehicle   Vehicle? @relation("VehicleReports", fields: [reportedByVehicleId], references: [id])
   reportedByVehicleId String?
 
-  reportedByWorker    Worker?       @relation("WorkerReports", fields: [reportedByWorkerId], references: [id])
-  reportedByWorkerId  String?
+  reportedByWorker   Worker? @relation("WorkerReports", fields: [reportedByWorkerId], references: [id])
+  reportedByWorkerId String?
 
-  status              ReportStatus  @default(reported)
-  severity            Severity
-  comments            String?
-  images              String[]
+  status   ReportStatus @default(reported)
+  severity Severity
+  comments String?
+  images   String[]
 
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([latitude, longitude])
 }
 
-
 model Vehicle {
-  id                 String        @id @default(uuid())
-  licensePlate       String        @unique
-  model              String?
-  year               Int?
-  color              String?
-  corporation        String?
+  id           String  @id @default(uuid())
+  licensePlate String  @unique
+  model        String?
+  year         Int?
+  color        String?
+  corporation  String?
 
   // ❗ Ya NO tiene assignedWorker directo
   // Ahora las asignaciones se manejan por la tabla Assignment (historial)
 
-  status             VehicleStatus @default(active)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  status    VehicleStatus @default(active)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  reports            Report[]      @relation("VehicleReports")
+  reports Report[] @relation("VehicleReports")
 
   // ⬇ Historial de asignaciones
-  assignments        Assignment[]
+  assignments Assignment[]
 }
-
 
 model Worker {
-  id                String        @id @default(uuid())
-  role              Role
-  email             String        @unique
-  passwordHash      String
-  name              String
-  secondName        String?
-  lastname          String
-  secondLastname    String
-  phoneNumber       String
-  fechaNacimiento   DateTime
-  status            WorkerStatus  @default(active)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  photoUrl          String?
+  id              String       @id @default(uuid())
+  role            Role
+  email           String       @unique
+  passwordHash    String
+  name            String
+  secondName      String?
+  lastname        String
+  secondLastname  String
+  phoneNumber     String
+  fechaNacimiento DateTime
+  status          WorkerStatus @default(active)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  photoUrl        String?
 
-  reports           Report[]      @relation("WorkerReports")
+  reports Report[] @relation("WorkerReports")
 
   // ⬇ Historial de asignaciones
-  assignments       Assignment[]
+  assignments Assignment[]
 }
-
 
 model Assignment {
-  id              String          @id @default(uuid())
+  id String @id @default(uuid())
 
-  worker          Worker          @relation(fields: [workerId], references: [id])
-  workerId        String
+  worker   Worker @relation(fields: [workerId], references: [id])
+  workerId String
 
-  vehicle         Vehicle         @relation(fields: [vehicleId], references: [id])
-  vehicleId       String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  vehicleId String
 
-  assignedAt      DateTime        @default(now())
-  completedAt     DateTime?
+  assignedAt  DateTime  @default(now())
+  completedAt DateTime?
 
   // ⬇ Estado de progreso del reporte
-  progressStatus  ProgressStatus  @default(not_started)
+  progressStatus ProgressStatus @default(not_started)
 
-  priority        Priority        @default(medium)
-  active          Boolean         @default(true) // ❗ Importante
-  notes           String?
+  priority Priority @default(medium)
+  active   Boolean  @default(true) // ❗ Importante
+  notes    String?
+
+  @@unique([vehicleId, active])
 }
-
 
 enum Role {
   admin

@@ -55,8 +55,20 @@ export const validateId = (id: string | undefined): string => {
 
 export const stringifyBigInts = (value: any): any => {
   if (value === null || value === undefined) return value;
-  if (typeof value === 'bigint') return value.toString();
-  if (Array.isArray(value)) return value.map(stringifyBigInts);
+
+  // ✅ IMPORTANTE: manejar Date primero
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(stringifyBigInts);
+  }
+
   if (typeof value === 'object') {
     const out: any = {};
     for (const k of Object.keys(value)) {
@@ -64,5 +76,6 @@ export const stringifyBigInts = (value: any): any => {
     }
     return out;
   }
+
   return value;
 };

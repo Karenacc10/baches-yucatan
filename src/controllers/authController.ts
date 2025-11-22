@@ -1,14 +1,27 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { hashPassword, comparePassword, generateToken, stringifyBigInts } from '../utils/helpers';
+import {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  stringifyBigInts
+} from '../utils/helpers';
 import { AuthenticatedRequest } from '../types';
-import { string } from 'zod';
+import {
+  createWorkerSchema,
+  loginSchema
+} from '../utils/validations';
 
+/* ===========================
+   REGISTER
+=========================== */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, ...userData } = req.body;
+    // ✅ Validar body con Zod
+    const validatedData = createWorkerSchema.parse(req.body);
+    const { email, password, ...userData } = validatedData;
 
-    // Check if user already exists
+    // 📌 Verificar si ya existe
     const existingWorker = await prisma.worker.findUnique({
       where: { email }
     });
@@ -16,57 +29,66 @@ export const register = async (req: Request, res: Response) => {
     if (existingWorker) {
       return res.status(409).json({
         error: 'Usuario ya existe',
-        message: 'Ya existe un trabajador con este email'
+        message: 'Ya existe un trabajador con este correo'
       });
     }
 
-    // Hash password
+    // 🔒 Encriptar contraseña
     const passwordHash = await hashPassword(password);
 
-    // Create worker
-const worker = await prisma.worker.create({
-  data: {
-    email,
-    passwordHash,
-    name: userData.name,
-    lastname: userData.lastname,
-    role: userData.role,
-    status: userData.status ?? 'active',
+    // ✅ Crear trabajador
+    const worker = await prisma.worker.create({
+      data: {
+        email,
+        passwordHash,
 
-    // Opcionales
-    ...(userData.secondName && { secondName: userData.secondName }),
-    ...(userData.photoUrl && { photoUrl: userData.photoUrl }),
+        name: userData.name,
+        secondName: userData.secondName ?? null,
+        lastname: userData.lastname,
+        secondLastname: userData.secondLastname,
 
-    // REQUERIDOS: asegúrate de proveerlos SIEMPRE
-    secondLastname: userData.secondLastname, // <-- requerido por el schema
-    phoneNumber: string(userData.phoneNumber), // <-- el schema espera Int
-    fechaNacimiento: new Date(userData.fechaNacimiento), // <-- requerido
-  },
-  select: {
-    id: true,
-    email: true,
-    name: true,
-    lastname: true,
-    role: true,
-    status: true,
-    createdAt: true
-  }
-});
+        role: userData.role,
+        status: userData.status ?? 'active',
 
-    // Generate token
+        phoneNumber: userData.phoneNumber, // ✅ String
+        fechaNacimiento: new Date(userData.fechaNacimiento),
+
+        photoUrl: userData.photoUrl ?? null
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastname: true,
+        role: true,
+        status: true,
+        createdAt: true
+      }
+    });
+
+    // 🔑 Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
       role: worker.role
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Trabajador registrado exitosamente',
-      data: stringifyBigInts(worker),
+      data: worker,
       token
     });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('Register error:', error);
+
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        details: error.errors
+      });
+    }
+
     res.status(500).json({
       error: 'Error al registrar trabajador',
       message: 'Ocurrió un error durante el registro'
@@ -74,11 +96,16 @@ const worker = await prisma.worker.create({
   }
 };
 
+
+/* ===========================
+   LOGIN
+=========================== */
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    // ✅ Validar con Zod
+    const { email, password } = loginSchema.parse(req.body);
 
-    // Find worker
+    // 🔍 Buscar trabajador
     const worker = await prisma.worker.findUnique({
       where: { email },
       select: {
@@ -106,9 +133,9 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify password
+    // 🔒 Verificar contraseña
     const isValidPassword = await comparePassword(password, worker.passwordHash);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Credenciales inválidas',
@@ -116,7 +143,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate token
+    // 🔑 Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
@@ -125,17 +152,31 @@ export const login = async (req: Request, res: Response) => {
 
     const { passwordHash, ...workerData } = worker;
 
-    // Si el rol es 'worker', requiere vehículo asignado para permitir el acceso móvil
+    // 📍 Si es WORKER, verificar vehículo asignado
     if (worker.role === 'worker') {
       const assignedVehicle = await prisma.vehicle.findFirst({
-        where: { assignments: { some: { workerId: worker.id, active: true } } },
-        select: { id: true, licensePlate: true, model: true, year: true, color: true }
+        where: {
+          assignments: {
+            some: {
+              workerId: worker.id,
+              active: true
+            }
+          }
+        },
+        select: {
+          id: true,
+          licensePlate: true,
+          model: true,
+          year: true,
+          color: true
+        }
       });
 
       if (!assignedVehicle) {
         return res.status(403).json({
           error: 'Sin vehículo asignado',
-          message: 'No tienes un vehículo asignado. No puedes ingresar a la app móvil hasta que se te asigne uno.'
+          message:
+            'No tienes un vehículo asignado. No puedes ingresar a la app móvil hasta que se te asigne uno.'
         });
       }
 
@@ -147,14 +188,23 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Para admin/supervisor permitir login normalmente
-    res.json({
+    // ✅ Admin/Supervisor
+    return res.json({
       message: 'Login exitoso',
       data: stringifyBigInts(workerData),
       token
     });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('Login error:', error);
+
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        details: error.errors
+      });
+    }
+
     res.status(500).json({
       error: 'Error al iniciar sesión',
       message: 'Ocurrió un error durante el login'
@@ -162,7 +212,14 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
+
+/* ===========================
+   GET PROFILE
+=========================== */
+export const getProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({
@@ -197,12 +254,14 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    res.json({
+    return res.json({
       message: 'Perfil obtenido exitosamente',
       data: stringifyBigInts(worker)
     });
+
   } catch (error) {
     console.error('Get profile error:', error);
+
     res.status(500).json({
       error: 'Error al obtener perfil',
       message: 'Ocurrió un error al obtener el perfil'

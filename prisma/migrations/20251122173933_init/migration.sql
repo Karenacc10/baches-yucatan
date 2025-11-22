@@ -94,10 +94,16 @@ CREATE TABLE "Assignment" (
 );
 
 -- CreateIndex
+CREATE INDEX "Report_latitude_longitude_idx" ON "Report"("latitude", "longitude");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Vehicle_licensePlate_key" ON "Vehicle"("licensePlate");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Worker_email_key" ON "Worker"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Assignment_vehicleId_active_key" ON "Assignment"("vehicleId", "active");
 
 -- AddForeignKey
 ALTER TABLE "Report" ADD CONSTRAINT "Report_reportedByVehicleId_fkey" FOREIGN KEY ("reportedByVehicleId") REFERENCES "Vehicle"("id") ON DELETE SET NULL ON UPDATE CASCADE;
