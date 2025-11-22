@@ -18,106 +18,100 @@ import {
 =========================== */
 export const register = async (req: Request, res: Response) => {
   try {
-    const validatedData = createWorkerSchema.parse(req.body)
-    const { email, password, ...userData } = validatedData
+    // ✅ Validar body con Zod
+    const validatedData = createWorkerSchema.parse(req.body);
+    const { email, password, ...userData } = validatedData;
 
-    // ✅ Convertir fecha
-    let birthDate: Date | null = null
+    // Normalizar teléfono
+    const phone = userData.phoneNumber?.toString().trim() ?? null;
 
+    // Validar fechaNacimiento
+    let birthDate: Date | null = null;
     if (userData.fechaNacimiento) {
-      birthDate = new Date(userData.fechaNacimiento)
-
+      birthDate = new Date(userData.fechaNacimiento);
       if (isNaN(birthDate.getTime())) {
         return res.status(400).json({
           error: 'Fecha inválida',
           message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
-        })
+        });
       }
     }
 
-    // ✅ Normalizar teléfono (ARREGLA EL ERROR 22P03)
-    // Normalizar teléfono y validar fecha
-const phone = userData.phoneNumber
-  ? userData.phoneNumber.toString().trim()
-  : null;
+    // Verificar si ya existe
+    const existingWorker = await prisma.worker.findUnique({ where: { email } });
+    if (existingWorker) {
+      return res.status(409).json({
+        error: 'Usuario ya existe',
+        message: 'Ya existe un trabajador con este correo'
+      });
+    }
 
-let birthDate: Date | null = null;
-if (userData.fechaNacimiento) {
-  birthDate = new Date(userData.fechaNacimiento);
-  if (isNaN(birthDate.getTime())) {
-    return res.status(400).json({
-      error: 'Fecha inválida',
-      message: 'fechaNacimiento debe tener formato: YYYY-MM-DD'
+    // Encriptar contraseña
+    const passwordHash = await hashPassword(password);
+
+    // Crear trabajador
+    const worker = await prisma.worker.create({
+      data: {
+        email,
+        passwordHash,
+        name: userData.name,
+        secondName: userData.secondName ?? null,
+        lastname: userData.lastname,
+        secondLastname: userData.secondLastname ?? null,
+        role: Role[userData.role as keyof typeof Role],
+        status: userData.status ?? 'active',
+        phoneNumber: phone,
+        fechaNacimiento: birthDate!,
+        photoUrl: userData.photoUrl ?? null
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastname: true,
+        role: true,
+        status: true,
+        createdAt: true
+      }
     });
-  }
-}
 
-const worker = await prisma.worker.create({
-  data: {
-    email,
-    passwordHash,
-    name: userData.name,
-    secondName: userData.secondName ?? null,
-    lastname: userData.lastname,
-    secondLastname: userData.secondLastname ?? null,
-    role: Role[userData.role as keyof typeof Role], // debe ser uno de los enums
-    status: userData.status ?? 'active',
-    phoneNumber: phone!,
-    fechaNacimiento: birthDate!,
-    photoUrl: userData.photoUrl ?? null
-  },
-  select: {
-    id: true,
-    email: true,
-    name: true,
-    lastname: true,
-    role: true,
-    status: true,
-    createdAt: true
-  }
-});
-
-
-    // 🔑 Generar token
+    // Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
       role: worker.role
-    })
+    });
 
     return res.status(201).json({
       message: 'Trabajador registrado exitosamente',
       data: worker,
       token
-    })
+    });
 
   } catch (error: any) {
-    console.error('Register error:', error)
+    console.error('Register error:', error);
 
     if (error.name === 'ZodError') {
       return res.status(400).json({
         error: 'Datos inválidos',
         details: error.errors
-      })
+      });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al registrar trabajador',
       message: 'Ocurrió un error durante el registro'
-    })
+    });
   }
-}
-
+};
 
 /* ===========================
    LOGIN
 =========================== */
 export const login = async (req: Request, res: Response) => {
   try {
-    // ✅ Validar con Zod
     const { email, password } = loginSchema.parse(req.body);
 
-    // 🔍 Buscar trabajador
     const worker = await prisma.worker.findUnique({
       where: { email },
       select: {
@@ -145,9 +139,8 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // 🔒 Verificar contraseña
+    // Verificar contraseña
     const isValidPassword = await comparePassword(password, worker.passwordHash);
-
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Credenciales inválidas',
@@ -155,7 +148,6 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // 🔑 Generar token
     const token = generateToken({
       id: worker.id,
       email: worker.email,
@@ -164,15 +156,12 @@ export const login = async (req: Request, res: Response) => {
 
     const { passwordHash, ...workerData } = worker;
 
-    // 📍 Si es WORKER, verificar vehículo asignado
+    // Si es WORKER, verificar vehículo asignado
     if (worker.role === 'worker') {
       const assignedVehicle = await prisma.vehicle.findFirst({
         where: {
           assignments: {
-            some: {
-              workerId: worker.id,
-              active: true
-            }
+            some: { workerId: worker.id, active: true }
           }
         },
         select: {
@@ -200,7 +189,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Admin/Supervisor
+    // Admin/Supervisor
     return res.json({
       message: 'Login exitoso',
       data: stringifyBigInts(workerData),
@@ -217,21 +206,17 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al iniciar sesión',
       message: 'Ocurrió un error durante el login'
     });
   }
 };
 
-
 /* ===========================
    GET PROFILE
 =========================== */
-export const getProfile = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({
@@ -274,7 +259,7 @@ export const getProfile = async (
   } catch (error) {
     console.error('Get profile error:', error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error al obtener perfil',
       message: 'Ocurrió un error al obtener el perfil'
     });
