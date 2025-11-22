@@ -11,7 +11,7 @@
     "copy-prisma": "cpx \"src/generated/prisma/**/*\" dist/generated/prisma"  
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"
