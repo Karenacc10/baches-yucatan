@@ -6,7 +6,8 @@ import routes from './routes';
 import { errorHandler } from './middleware/validation';
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3001', 10);
+app.set('trust proxy', 1); // ← IMPORTANTE PARA RENDER
+const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());
